@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Portfolio Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.5; color: #222; }
+        h1 { color: #1f4e79; margin-bottom: 5px; }
+        h2 { color: #2c5aa0; margin-top: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; }
+        th, td { border: 1px solid #bbb; padding: 8px 10px; text-align: left; }
+        th { background-color: #f0f4f8; font-weight: 600; }
+        .green { color: #0a7a0a; font-weight: 600; }
+        .red { color: #c41e1e; font-weight: 600; }
+        .summary-box {
+            background: #f8fafc;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin: 15px 0 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .summary-item { font-size: 15px; }
+        .summary-item strong { display: block; color: #555; font-size: 13px; margin-bottom: 2px; }
+        .big-number { font-size: 18px; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <h1>Portfolio Report</h1>
+    <p><strong>Generation Date:</strong> {{ date }}</p>
+
+    <!-- ===== Portfolio Summary ===== -->
+    <h2>7-Day Summary</h2>
+    <div class="summary-box">
+        <div class="summary-item">
+            <strong>Current Value</strong>
+            <span class="big-number">${{ "{:,.2f}".format(current_value) }}</span>
+        </div>
+        <div class="summary-item">
+            <strong>Average Value (7d)</strong>
+            <span class="big-number">${{ "{:,.2f}".format(avg_value_7d) }}</span>
+        </div>
+        <div class="summary-item">
+            <strong>7-Day Change</strong>
+            <span class="big-number {% if change_7d_pct > 0 %}green{% else %}red{% endif %}">
+                {{ "{:+.2f}".format(change_7d_pct) }}%
+                (${{ "{:+,.2f}".format(change_7d_abs) }})
+            </span>
+        </div>
+        <div class="summary-item">
+            <strong>Value 7 Days Ago</strong>
+            <span class="big-number">${{ "{:,.2f}".format(value_7d_ago) }}</span>
+        </div>
+    </div>
+
+    <!-- ===== Portfolio Value Dynamics ===== -->
+    <h2>Portfolio Value Dynamics</h2>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Portfolio Value</th>
+            <th>Change vs Previous Day</th>
+        </tr>
+        {% for i, day in enumerate(daily_values) %}
+        <tr>
+            <td>{{ day.date }}</td>
+            <td>${{ "{:,.2f}".format(day.value) }}</td>
+            <td>
+                {% if i > 0 %}
+                    {% set prev = daily_values[i-1].value %}
+                    {% set chg = ((day.value / prev) - 1) * 100 %}
+                    <span class="{% if chg > 0 %}green{% else %}red{% endif %}">
+                        {{ "{:+.2f}".format(chg) }}%
+                    </span>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- ===== Positions ===== -->
+    <h2>Portfolio Positions</h2>
+    <table>
+        <tr>
+            <th>Ticker</th>
+            <th>Quantity</th>
+            <th>Current Price</th>
+            <th>Current Value</th>
+            <th>Avg. Price (7d)</th>
+            <th>Change (7d)</th>
+        </tr>
+        {% for ticker, info in per_ticker.items() %}
+        <tr>
+            <td><strong>{{ ticker }}</strong></td>
+            <td>{{ info.quantity }}</td>
+            <td>${{ "{:,.2f}".format(info.current_price) }}</td>
+            <td>${{ "{:,.2f}".format(info.current_value) }}</td>
+            <td>${{ "{:,.2f}".format(info.avg_price_7d) }}</td>
+            <td class="{% if info.change_7d_pct > 0 %}green{% else %}red{% endif %}">
+                {{ "{:+.2f}".format(info.change_7d_pct) }}%
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

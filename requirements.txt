@@ -1,0 +1,15 @@
+aiogram>=3.4
+yfinance
+sqlalchemy[asyncio]
+aiosqlite
+apscheduler
+pydantic-settings
+pandas
+matplotlib
+numpy
+openpyxl
+xlsxwriter
+jinja2
+weasyprint
+cachetools
+seaborn

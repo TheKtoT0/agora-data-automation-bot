@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: agora_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data          # база будет сохраняться на диске
+      - ./bot.log:/app/bot.log    # логи тоже

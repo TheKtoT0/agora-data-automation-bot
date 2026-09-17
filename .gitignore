@@ -1,0 +1,8 @@
+.env
+*.db
+__pycache__/
+.venv/
+venv/
+bot.log
+*.log
+.DS_Store
