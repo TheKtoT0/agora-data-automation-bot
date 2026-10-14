@@ -24,6 +24,7 @@ from scheduler import *
 from jobs import *
 from inline_keyboards import *
 from reply_keyboards import *
+from outer import emit_event
 
 
 rtr = Router(name="user")
@@ -169,7 +170,7 @@ async def handle_1_ticker(message: Message, state: FSMContext):
 
         if action == "pricechart":
 
-            chart_buf = create_price_chart(ticker)
+            chart_buf = await asyncio.to_thread(create_price_chart, ticker)
 
             if chart_buf is None:
                 await message.answer(f"Failed to load data for {ticker}")
@@ -186,7 +187,7 @@ async def handle_1_ticker(message: Message, state: FSMContext):
 
         if action == "metrics":
 
-            info = safe_ticker_info(ticker)
+            info = await asyncio.to_thread(safe_ticker_info, ticker)
 
             text = (
                 f"<b>{ticker}</b> metrics:\n\n"
@@ -203,7 +204,7 @@ async def handle_1_ticker(message: Message, state: FSMContext):
 
         if action == "info":
             
-            info = safe_ticker_info(ticker)
+            info = await asyncio.to_thread(safe_ticker_info, ticker)
 
             text = (
                 f"<b>{info['displayName']}</b> ({ticker})\n\n"
@@ -238,7 +239,7 @@ async def handle_2_tickers(message: Message, state: FSMContext):
     try:
         if action == "compare":
 
-            chart_buf = pricechart_comp(ticker1, ticker2)
+            chart_buf = await asyncio.to_thread(pricechart_comp, ticker1, ticker2)
 
             if chart_buf is None:
                 await message.answer(f"Failed to load data for {ticker1} and {ticker2}")
@@ -254,7 +255,7 @@ async def handle_2_tickers(message: Message, state: FSMContext):
 
             await message.answer(f"Comparing metrics:")
 
-            chart_buf = totable(ticker1, ticker2)
+            chart_buf = await asyncio.to_thread(totable, ticker1, ticker2)
 
             file = types.BufferedInputFile(
             chart_buf.getvalue(), 
@@ -293,7 +294,7 @@ async def cmd_price(message: Message, command: CommandObject, state: FSMContext)
         period = parts[1] if len(parts) > 1 else "1y"
 
         # Шпора на периоды yfinance: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
-        chart_buf = create_price_chart(ticker, period)
+        chart_buf = await asyncio.to_thread(create_price_chart, ticker, period)
 
         if chart_buf is None:
             await message.answer(f"Failed to load data for {ticker}")
@@ -321,7 +322,7 @@ async def cmd_compare(message: Message, command: CommandObject, state: FSMContex
         ticker1 = parts[0].upper()
         ticker2 = parts[1].upper()
 
-        chart_buf = pricechart_comp(ticker1, ticker2)
+        chart_buf = await asyncio.to_thread(pricechart_comp, ticker1, ticker2)
 
         if chart_buf is None:
             await message.answer(f"Failed to load data for {ticker1} and {ticker2}")
@@ -337,7 +338,7 @@ async def cmd_compare(message: Message, command: CommandObject, state: FSMContex
 
         await message.answer(f"Comparing metrics:")
 
-        chart_buf = totable(ticker1, ticker2)
+        chart_buf = await asyncio.to_thread(totable, ticker1, ticker2)
 
         file = types.BufferedInputFile(
         chart_buf.getvalue(), 
@@ -358,7 +359,7 @@ async def cmd_compare(message: Message, command: CommandObject, state: FSMContex
 async def metriki(message: Message, command: CommandObject, state: FSMContext):
     if command.args:
         ticker = command.args
-        info = safe_ticker_info(ticker)
+        info = await asyncio.to_thread(safe_ticker_info, ticker)
 
         text = (
             f"<b>{ticker}</b> metrics:\n\n"
@@ -395,7 +396,7 @@ async def send_report_portfolio(message: Message):
 async def info(message: Message, command: CommandObject, state: FSMContext):
     if command.args:
         ticker = command.args
-        info = safe_ticker_info(ticker)
+        info = await asyncio.to_thread(safe_ticker_info, ticker)
 
         text = (
             f"<b>{info['displayName']}</b> ({ticker})\n\n"
@@ -436,6 +437,13 @@ async def process_schedule_command_price(message: Message, state: FSMContext, bo
         )
 
         job_id = f"daily_price_{sub_id}"
+
+        await emit_event(
+        "subscription_created",
+        ticker=ticker,
+        sub_type=job_id,
+        user_id=message.from_user.id,
+        )
 
         # 2. Создаём job
         await add_daily_price_job(
@@ -492,6 +500,13 @@ async def process_schedule_command_chart(message: Message, state: FSMContext, bo
 
         job_id = f'daily_chart_{sub_id}'
 
+        await emit_event(
+        "subscription_created",
+        ticker=ticker,
+        sub_type=job_id,
+        user_id=message.from_user.id,
+        )
+
         await add_daily_chart_job(bot=bot, chat_id=message.chat.id, ticker=ticker, hour=hour, minute=minute, job_id=job_id)
 
         user_tz = await get_user_timezone(message.from_user.id)
@@ -532,6 +547,13 @@ async def cmd_subscribe_report_ticker(message: Message, command: CommandObject, 
     
             job_id = f'daily_report_ticker_{sub_id}'
 
+            await emit_event(
+            "subscription_created",
+            ticker=ticker,
+            sub_type=job_id,
+            user_id=message.from_user.id,
+            )
+
             await update_subscription_job_id(sub_id, job_id)
     
             await add_daily_report_ticker_job(bot=bot, chat_id=message.chat.id, ticker=ticker, hour=hour, minute=minute, job_id=job_id)
@@ -571,6 +593,13 @@ async def process_schedule_report_ticker(message: Message, state: FSMContext, bo
         )
 
         job_id = f'daily_report_ticker_{sub_id}'
+
+        await emit_event(
+        "subscription_created",
+        ticker=ticker,
+        sub_type=job_id,
+        user_id=message.from_user.id,
+        )
 
         await update_subscription_job_id(sub_id, job_id)
 

@@ -8,6 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from indicators import *
 # from scheduler import * <------ НЕ РАСКОММЕНТИРУЙ, иначе цикличный импорт
 from crud import *
+from outer import emit_event
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,8 @@ async def send_daily_report_ticker(
             tz_info = timezone.utc  # fallback
 
         filename = f"{ticker}_report.pdf"
-        file_bytes = types.BufferedInputFile(file=generate_report_no_save(ticker),
+        pdf_bytes = await asyncio.to_thread(generate_report_no_save, ticker)
+        file_bytes = types.BufferedInputFile(file=pdf_bytes,
                                                filename=filename)
 
           # функция из servicesnstuff
@@ -313,6 +315,14 @@ async def send_alert_bordercross(
                 chat_id=chat_id,
                 text=message,
                 parse_mode="HTML"
+            )
+
+            await emit_event(
+            "alert_triggered",
+            ticker=ticker,
+            indicator=indicator,
+            value=current_value,
+            chat_id=chat_id,
             )
             
             # Опционально: удаляем алерт после срабатывания (одноразовый)

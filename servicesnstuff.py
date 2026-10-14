@@ -78,7 +78,7 @@ def create_plot():
     
     return buf
 
-async def get_price(ticker: str):
+def get_price_sync(ticker: str):
     data_ticker = yf.Ticker(ticker).history(period="2d")
     close_today = data_ticker["Close"].iloc[-1]
     close_yesterday = data_ticker["Close"].iloc[-2]
@@ -94,6 +94,9 @@ async def get_price(ticker: str):
         "open yesterday": open_yesterday
         # ... добавить по необходимости еще чо-то
     }
+
+async def get_price(ticker: str) -> dict:
+    return await asyncio.to_thread(get_price_sync, ticker)
 
 def fetch_current_price_OLD(ticker):
     asset = yf.Ticker(ticker)
